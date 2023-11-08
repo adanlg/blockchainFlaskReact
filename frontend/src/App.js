@@ -12,7 +12,6 @@ function App() {
   const [contract, setContract] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [isConnected, setIsConnected] = useState(false); // Track MetaMask connection
-  const [toAddress, setToAddress] = useState(""); // Recipient address
   const [tokenURI, setTokenURI] = useState(""); // Token URI
 
   useEffect(() => {
@@ -46,9 +45,12 @@ function App() {
     }
   };
 
-  // Mint token function with parameters
-  const mintToken = async (toAddress, tokenURI) => {
+  // Mint token function with user's address as parameter
+  const mintToken = async () => {
+    console.log(accounts[0])
+    console.log(tokenURI)
     if (contract && accounts.length > 0) {
+      const toAddress = accounts[0]; // Use the user's address as the recipient address
       try {
         // Replace 'safeMint' with your contract's mint method and pass the parameters
         await contract.methods.safeMint(toAddress, tokenURI).send({ from: accounts[0] });
@@ -57,11 +59,6 @@ function App() {
         console.error("Error minting token:", error);
       }
     }
-  };
-
-  // Function to handle the "Mint Token" button click
-  const handleMintToken = () => {
-    mintToken(toAddress, tokenURI);
   };
 
   return (
@@ -77,14 +74,6 @@ function App() {
         {isConnected ? (
           // If connected, display the Mint Token form
           <div>
-            <label htmlFor="toAddress">Recipient Address:</label>
-            <input
-              type="text"
-              id="toAddress"
-              value={toAddress}
-              onChange={(e) => setToAddress(e.target.value)}
-            />
-            <br />
             <label htmlFor="tokenURI">Token URI:</label>
             <input
               type="text"
@@ -93,7 +82,7 @@ function App() {
               onChange={(e) => setTokenURI(e.target.value)}
             />
             <br />
-            <button onClick={handleMintToken} className="btn btn-primary">
+            <button onClick={mintToken} className="btn btn-primary">
               Mint Token
             </button>
           </div>
