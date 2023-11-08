@@ -1,6 +1,15 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo, ObjectId
 from flask_cors import CORS
+import json
+from web3 import Web3, HTTPProvider
+
+with open('/home/adanlg2/myprojectflask2/flaskMongoReact/flask-react-mongodb-crud/backend/abi.json', 'r') as abi_definition:
+    contract_abi = json.load(abi_definition)
+
+contract_a_abi = contract_abi['ABI_A']
+
+print(contract_a_abi)
 
 # Instantiation
 app = Flask(__name__)
@@ -13,9 +22,51 @@ CORS(app)
 # Database
 collection = mongo.db.luis  # Use 'collection' directly for MongoDB operations
 
+web3 = Web3(HTTPProvider('https://sepolia.infura.io/v3/2baf96dbc430498f93cc9ab228eb3de1'))
+
+# Set up the contract
+contract_address = web3.toChecksumAddress('0x928297De339eb353b6150f69c23aaE61639dD4EA')
+contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+
+# Your Ethereum account private key
+private_key = 'YOUR_PRIVATE_KEY'
+
+# Routes
+@app.route('/mint', methods=['POST'])
+def mint_nft():
+    # Assuming the request has the 'to' address and 'uri' for the NFT
+    to_address = request.json['to']
+    token_uri = request.json['uri']
+
+    # The account that is sending the transaction
+    account = web3.eth.account.privateKeyToAccount(private_key)
+
+    # Build the transaction
+    nonce = web3.eth.getTransactionCount(account.address)
+    tx = contract.functions.safeMint(to_address, token_uri).buildTransaction({
+        'chainId': 11155111,  # Sepolia Testnet Chain ID
+        'gas': 2000000,
+        'gasPrice': web3.toWei('50', 'gwei'),
+        'nonce': nonce
+    })
+
+    # Sign the transaction
+    signed_tx = account.sign_transaction(tx)
+
+    # Send the transaction
+    tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+
+    # Wait for the transaction to be mined
+    receipt = web3.eth.waitForTransactionReceipt(tx_hash)
+
+    return jsonify({'transaction_hash': str(tx_hash.hex()), 'receipt': dict(receipt)})
+
+
 # Routes
 @app.route('/users', methods=['POST'])
 def createUser():
+    print(contract_a_abi)
+
     print(request.json)
     data = {
         'name': request.json['name'],
@@ -57,6 +108,8 @@ def deleteUser(id):
 
 @app.route('/users/<id>', methods=['PUT'])
 def updateUser(id):
+    print(contract_a_abi)
+
     print(request.json)
     collection.update_one({'_id': ObjectId(id)}, {"$set": {
         'name': request.json['name'],
