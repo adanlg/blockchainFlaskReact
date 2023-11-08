@@ -1,5 +1,5 @@
-[
-	{
+export const abi = [
+    {
 		"inputs": [
 			{
 				"internalType": "address",
@@ -666,5 +666,5 @@
 		"stateMutability": "view",
 		"type": "function"
 	}
-]
+];
 

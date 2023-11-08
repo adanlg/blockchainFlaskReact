@@ -7,10 +7,6 @@ from web3 import Web3, HTTPProvider
 with open('/home/adanlg2/myprojectflask2/flaskMongoReact/flask-react-mongodb-crud/backend/abi.json', 'r') as abi_definition:
     contract_abi = json.load(abi_definition)
 
-contract_a_abi = contract_abi['ABI_A']
-
-print(contract_a_abi)
-
 # Instantiation
 app = Flask(__name__)
 app.config['MONGO_URI'] = 'mongodb://localhost/juan'
@@ -25,7 +21,7 @@ collection = mongo.db.luis  # Use 'collection' directly for MongoDB operations
 web3 = Web3(HTTPProvider('https://sepolia.infura.io/v3/2baf96dbc430498f93cc9ab228eb3de1'))
 
 # Set up the contract
-contract_address = web3.toChecksumAddress('0x928297De339eb353b6150f69c23aaE61639dD4EA')
+contract_address = web3.to_checksum_address('0x928297De339eb353b6150f69c23aaE61639dD4EA')
 contract = web3.eth.contract(address=contract_address, abi=contract_abi)
 
 # Your Ethereum account private key
@@ -65,7 +61,6 @@ def mint_nft():
 # Routes
 @app.route('/users', methods=['POST'])
 def createUser():
-    print(contract_a_abi)
 
     print(request.json)
     data = {
@@ -108,8 +103,6 @@ def deleteUser(id):
 
 @app.route('/users/<id>', methods=['PUT'])
 def updateUser(id):
-    print(contract_a_abi)
-
     print(request.json)
     collection.update_one({'_id': ObjectId(id)}, {"$set": {
         'name': request.json['name'],
