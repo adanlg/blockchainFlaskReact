@@ -11,17 +11,16 @@ function App() {
   const [web3, setWeb3] = useState(null);
   const [contract, setContract] = useState(null);
   const [accounts, setAccounts] = useState([]);
-  const [isConnected, setIsConnected] = useState(false); // Track MetaMask connection
-  const [tokenURI, setTokenURI] = useState(""); // Token URI
+  const [isConnected, setIsConnected] = useState(false);
+  const [file, setFile] = useState(null);
 
   useEffect(() => {
     if (window.ethereum) {
       const web3Instance = new Web3(window.ethereum);
       setWeb3(web3Instance);
-      const contractInstance = new web3Instance.eth.Contract(abi, "0x928297De339eb353b6150f69c23aaE61639dD4EA"); // Replace with your contract address
+      const contractInstance = new web3Instance.eth.Contract(abi, "0x928297De339eb353b6150f69c23aaE61639dD4EA");
       setContract(contractInstance);
 
-      // Check if MetaMask is already connected
       if (window.ethereum.selectedAddress) {
         setAccounts([window.ethereum.selectedAddress]);
         setIsConnected(true);
@@ -31,11 +30,10 @@ function App() {
     }
   }, []);
 
-  // Function to connect to MetaMask
   const connectToMetaMask = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
-        await window.ethereum.enable(); // Request account access
+        await window.ethereum.enable();
         const accounts = await web3.eth.getAccounts();
         setAccounts(accounts);
         setIsConnected(true);
@@ -45,16 +43,47 @@ function App() {
     }
   };
 
-  // Mint token function with user's address as parameter
+  const handleFileInput = (e) => {
+    setFile(e.target.files[0]);
+  };
+
+  const uploadToPinata = async (file) => {
+    const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
+    let data = new FormData();
+    data.append("file", file);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "pinata_api_key": "3443762cab256e15b3de",
+          "pinata_secret_api_key": "075e69533693e9a34e5c2091161a544aa1bfb41d917b6d597fe3ea4d281f5b41"
+        },
+        body: data
+      });
+
+      const pinataResponse = await response.json();
+      return pinataResponse.IpfsHash;
+    } catch (error) {
+      console.error("Error uploading file to Pinata:", error);
+      return null;
+    }
+  };
+
   const mintToken = async () => {
-    console.log(accounts[0])
-    console.log(tokenURI)
-    if (contract && accounts.length > 0) {
-      const toAddress = accounts[0]; // Use the user's address as the recipient address
+    if (contract && accounts.length > 0 && file) {
+      const toAddress = accounts[0];
       try {
-        // Replace 'safeMint' with your contract's mint method and pass the parameters
-        await contract.methods.safeMint(toAddress, tokenURI).send({ from: accounts[0] });
-        console.log("Minting successful");
+        const cid = await uploadToPinata(file);
+        if (cid) {
+          console.log(cid)
+          console.log(toAddress)
+          const tokenURI = `ipfs://${cid}`;
+          await contract.methods.safeMint(toAddress, tokenURI).send({ from: accounts[0] });
+          console.log("Minting successful with tokenURI:", tokenURI);
+        } else {
+          console.error("Failed to upload file to Pinata");
+        }
       } catch (error) {
         console.error("Error minting token:", error);
       }
@@ -72,14 +101,12 @@ function App() {
         </Switch>
 
         {isConnected ? (
-          // If connected, display the Mint Token form
           <div>
-            <label htmlFor="tokenURI">Token URI:</label>
+            <label htmlFor="fileInput">Token File:</label>
             <input
-              type="text"
-              id="tokenURI"
-              value={tokenURI}
-              onChange={(e) => setTokenURI(e.target.value)}
+              type="file"
+              id="fileInput"
+              onChange={handleFileInput}
             />
             <br />
             <button onClick={mintToken} className="btn btn-primary">
@@ -87,7 +114,6 @@ function App() {
             </button>
           </div>
         ) : (
-          // If not connected, display the Connect to MetaMask button
           <button onClick={connectToMetaMask} className="btn btn-primary">
             Connect to MetaMask
           </button>
